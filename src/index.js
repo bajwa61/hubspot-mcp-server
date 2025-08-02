@@ -13,13 +13,167 @@ import "./tools/toolsRegistry.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
 // Error handling middleware
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
+
+// MCP Protocol Implementation
+class MCPServer {
+  constructor() {
+    this.tools = getTools();
+    this.prompts = getPrompts();
+  }
+
+  // Handle MCP requests
+  async handleRequest(request) {
+    const { jsonrpc, method, params, id } = request;
+
+    try {
+      let result;
+
+      switch (method) {
+        case "initialize":
+          result = await this.initialize(params);
+          break;
+        case "tools/list":
+          result = await this.listTools();
+          break;
+        case "tools/call":
+          result = await this.callTool(params);
+          break;
+        case "prompts/list":
+          result = await this.listPrompts();
+          break;
+        case "prompts/get":
+          result = await this.getPrompt(params);
+          break;
+        default:
+          throw new Error(`Unknown method: ${method}`);
+      }
+
+      return {
+        jsonrpc: "2.0",
+        id: id,
+        result: result,
+      };
+    } catch (error) {
+      return {
+        jsonrpc: "2.0",
+        id: id,
+        error: {
+          code: -32603,
+          message: error.message,
+        },
+      };
+    }
+  }
+
+  async initialize(params) {
+    return {
+      protocolVersion: "2024-11-05",
+      capabilities: {
+        tools: {},
+        prompts: {},
+        resources: {},
+      },
+      serverInfo: {
+        name: APP_NAME,
+        version: APP_VERSION,
+      },
+    };
+  }
+
+  async listTools() {
+    return {
+      tools: this.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema || {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      })),
+    };
+  }
+
+  async callTool(params) {
+    const { name, arguments: args } = params;
+    console.log(`MCP: Calling tool ${name} with args:`, args);
+
+    const result = await handleToolCall(name, args || {});
+
+    return {
+      content: [
+        {
+          type: "text",
+          text:
+            typeof result === "string"
+              ? result
+              : JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+
+  async listPrompts() {
+    return {
+      prompts: this.prompts.map((prompt) => ({
+        name: prompt.name,
+        description: prompt.description,
+        arguments: prompt.arguments || [],
+      })),
+    };
+  }
+
+  async getPrompt(params) {
+    const { name, arguments: args } = params;
+    console.log(`MCP: Getting prompt ${name} with args:`, args);
+
+    const result = await getPromptMessages(name, args || {});
+
+    return result;
+  }
+}
+
+const mcpServer = new MCPServer();
+
+app.post(
+  "/mcp",
+  asyncHandler(async (req, res) => {
+    console.log("MCP Request:", req.body);
+
+    const response = await mcpServer.handleRequest(req.body);
+    console.log("MCP Response:", response);
+    res.json(response);
+  })
+);
+
+// MCP Capabilities endpoint
+app.get("/mcp/capabilities", (req, res) => {
+  res.json({
+    protocolVersion: "2024-11-05",
+    capabilities: {
+      tools: {},
+      prompts: {},
+      resources: {},
+    },
+    serverInfo: {
+      name: APP_NAME,
+      version: APP_VERSION,
+    },
+  });
+});
 
 // Server info endpoint
 app.get("/info", (req, res) => {
@@ -102,6 +256,9 @@ app.post(
 app.get("/health", (req, res) => {
   res.json({
     status: "healthy",
+    mcp_ready: true,
+    tools_count: mcpServer.tools.length,
+    prompts_count: mcpServer.prompts.length,
     timestamp: new Date().toISOString(),
   });
 });
@@ -119,17 +276,19 @@ app.use((error, req, res, next) => {
 
 async function main() {
   try {
-    console.error(`Starting ${APP_NAME} REST API Server...`);
+    console.error(`Starting ${APP_NAME} MCP Server...`);
 
-    const server = app.listen(PORT, () => {
-      console.error(`Server running on port ${PORT}`);
-      console.error(`Available endpoints:`);
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      console.error(`🚀 MCP Server running on port ${PORT}`);
+      console.error(`📡 MCP endpoint: http://localhost:${PORT}/mcp`);
+      console.error(`🔧 REST endpoints:`);
       console.error(`  GET  /info - Server information`);
       console.error(`  GET  /health - Health check`);
       console.error(`  GET  /tools - List available tools`);
       console.error(`  POST /tools/:toolName/call - Execute a tool`);
       console.error(`  GET  /prompts - List available prompts`);
       console.error(`  POST /prompts/:promptName - Get prompt messages`);
+      console.error(`💡 For ngrok: ngrok http ${PORT}`);
     });
 
     // Handle graceful shutdown
