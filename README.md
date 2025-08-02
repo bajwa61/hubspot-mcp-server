@@ -2,8 +2,6 @@
 
 A lightweight, AI-ready backend that connects **HubSpot CRM** to assistants or applications via the **Model Context Protocol (MCP)**. Perfect for building intelligent agents or UI apps that need real-time CRM data access using natural language.
 
----
-
 ## Table of Contents
 
 * [Overview](#overview)
@@ -17,15 +15,11 @@ A lightweight, AI-ready backend that connects **HubSpot CRM** to assistants or a
 * [Contributing](#contributing)
 * [License](#license)
 
----
-
 ## Overview
 
 This project exposes **HubSpot CRM tools** through a universal interface called **MCP (Model Context Protocol)**. You can connect AI assistants or your own frontend apps via simple HTTP requests.
 
 Instead of calling individual HubSpot APIs, your assistant can auto-discover available tools like `search contacts`, `create deal`, or `update company`, and act on them intelligently.
-
----
 
 ## Key Features
 
@@ -36,8 +30,6 @@ Instead of calling individual HubSpot APIs, your assistant can auto-discover ava
 * **MCP + REST Support**: Call tools via either protocol
 * **n8n Integration**: Easily plug into no-code workflows and AI agents
 
----
-
 ## Architecture
 
 ```
@@ -45,8 +37,6 @@ User → AI Agent or UI → MCP Client → MCP Server → HubSpot API
 ```
 
 Your app or AI assistant sends requests to the MCP server, which handles authentication and tool execution with the HubSpot API.
-
----
 
 ## Getting Started
 
@@ -81,9 +71,6 @@ npm run dev
 # Production
 npm start
 ```
-
----
-
 ## API Reference
 
 ### MCP Endpoints
@@ -102,8 +89,6 @@ npm start
 | POST   | `/tools/:toolName/call` | Call a specific tool           |
 | GET    | `/prompts`              | Optional: list prompt names    |
 | POST   | `/prompts/:promptName`  | Optional: fetch prompt content |
-
----
 
 ## Example API Calls
 
@@ -135,8 +120,6 @@ curl -X POST http://localhost:3000/tools/hubspot-batch-create-objects/call \
     }]
   }'
 ```
-
----
 
 ## AI Agent Setup
 
@@ -177,8 +160,6 @@ Example agent configuration:
 
 Your AI Agent in n8n can now auto-discover tools and query your HubSpot CRM via natural language.
 
----
-
 ## Example Use Cases
 
 * **CRM Search**
@@ -190,8 +171,6 @@ Your AI Agent in n8n can now auto-discover tools and query your HubSpot CRM via 
 * **Pipeline Analysis**
   "List deals that haven’t had a follow-up in over 30 days."
 
----
-
 ## Contributing
 
 1. Fork the repo
@@ -199,8 +178,6 @@ Your AI Agent in n8n can now auto-discover tools and query your HubSpot CRM via 
 3. Add your feature or fix
 4. Run `npm run lint` and `npm test`
 5. Submit a pull request
-
----
 
 ## License
 
