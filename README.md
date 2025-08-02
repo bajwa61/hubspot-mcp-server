@@ -1,144 +1,95 @@
-# AI-Powered HubSpot Assistant (via MCP)
+# HubSpot MCP Server
 
-A lightweight, AI-ready backend that connects **HubSpot CRM** to assistants or applications via the **Model Context Protocol (MCP)**. Perfect for building intelligent agents or UI apps that need real-time CRM data access using natural language.
-
-## Table of Contents
-
-* [Overview](#overview)
-* [Key Features](#key-features)
-* [Architecture](#architecture)
-* [Getting Started](#getting-started)
-* [API Reference](#api-reference)
-* [Example API Calls](#example-api-calls)
-* [AI Agent Setup](#ai-agent-setup)
-* [Example Use Cases](#example-use-cases)
-* [Contributing](#contributing)
-* [License](#license)
+A Model Context Protocol (MCP) server for HubSpot CRM integration, compatible with Windows, macOS, and Linux.
 
 ## Overview
 
-This project exposes **HubSpot CRM tools** through a universal interface called **MCP (Model Context Protocol)**. You can connect AI assistants or your own frontend apps via simple HTTP requests.
+This MCP server provides access to HubSpot CRM using a unified JSON-RPC 2.0 interface. It enables assistants, automation tools, or applications to search, create, and update contacts, companies, and deals—without directly interacting with individual HubSpot API endpoints. It is ideal for integration into both code-based and no-code environments.
 
-Instead of calling individual HubSpot APIs, your assistant can auto-discover available tools like `search contacts`, `create deal`, or `update company`, and act on them intelligently.
+## Installation
 
-## Key Features
+1. Clone the repository:
 
-* **CRM Search & Creation**: Search, create, or update contacts, companies, and deals
-* **AI-Assistant Compatible**: Works with Claude, GPT, and other modern AI models
-* **Auto Tool Discovery**: Assistant dynamically finds tools via MCP
-* **HTTP-First Design**: Use in UI apps, chatbots, or headless AI agents
-* **MCP + REST Support**: Call tools via either protocol
-* **n8n Integration**: Easily plug into no-code workflows and AI agents
+   ```bash
+   git clone https://github.com/bajwa61/hubspot-mcp-server
+   cd hubspot-mcp-server
+   ```
 
-## Architecture
+2. Install dependencies:
 
-```
-User → AI Agent or UI → MCP Client → MCP Server → HubSpot API
-```
+   ```bash
+   npm install
+   ```
 
-Your app or AI assistant sends requests to the MCP server, which handles authentication and tool execution with the HubSpot API.
+3. Build the project:
 
-## Getting Started
+   ```bash
+   npm run build
+   ```
 
-### 1. Clone and Install
+## Configuration
 
-```bash
-git clone <repository-url>
-cd hubspot-mcp-server
-npm install
-```
+This MCP server can be used within orchestration environments or automation tools like **n8n**, **LangChain**, **Flowise**, or any JSON-RPC-compatible client.
 
-### 2. Configure `.env`
+### Environment Variables
 
-```env
-# HubSpot Access Token
-HUBSPOT_ACCESS_TOKEN=pat-na1-your-token-here
+Set credentials via environment variables:
 
-# Server Settings
-PORT=3000
-NODE_ENV=development
-LOG_LEVEL=info
-```
+| Variable               | Description                                          |
+|------------------------|------------------------------------------------------|
+| `HUBSPOT_ACCESS_TOKEN` | HubSpot private app token with CRM scopes            |
+| `PORT`                 | (Optional) Server port (default: 3000)               |
+| `NODE_ENV`             | (Optional) Environment mode: `development` or `production` |
 
-> You must [create a HubSpot private app](https://developers.hubspot.com/docs/api/private-apps) and grant CRM scopes.
+You may also provide the access token directly in the `params` of the JSON-RPC request if preferred.
 
-### 3. Start the Server
-
-```bash
-# Development
-npm run dev
-
-# Production
-npm start
-```
-## API Reference
-
-### MCP Endpoints
-
-| Method | Endpoint            | Description              |
-| ------ | ------------------- | ------------------------ |
-| POST   | `/mcp`              | Main MCP interface       |
-| GET    | `/mcp/capabilities` | List all available tools |
-
-### REST API Endpoints
-
-| Method | Endpoint                | Description                    |
-| ------ | ----------------------- | ------------------------------ |
-| GET    | `/health`               | Server status                  |
-| GET    | `/tools`                | List available tools           |
-| POST   | `/tools/:toolName/call` | Call a specific tool           |
-| GET    | `/prompts`              | Optional: list prompt names    |
-| POST   | `/prompts/:promptName`  | Optional: fetch prompt content |
-
-## Example API Calls
-
-### Search Contacts
-
-```bash
-curl -X POST http://localhost:3000/tools/hubspot-search-objects/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "object_type": "contacts",
-    "limit": 10,
-    "properties": ["firstname", "lastname", "email"]
-  }'
-```
-
-### Create a Company
-
-```bash
-curl -X POST http://localhost:3000/tools/hubspot-batch-create-objects/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "object_type": "companies",
-    "inputs": [{
-      "properties": {
-        "name": "TechStart Inc",
-        "industry": "Technology",
-        "city": "San Francisco"
-      }
-    }]
-  }'
-```
-
-## AI Agent Setup
-
-You can connect this server to **any AI assistant** or **chat-based UI** that supports HTTP requests and dynamic tool calling.
-
-### Option 1: Custom AI Agent
-
-Configure your AI agent to:
-
-* Send MCP requests to `/mcp`
-* Auto-discover tools from `/mcp/capabilities`
-* Parse and call tool definitions returned from the server
-
-Example agent configuration:
+### JSON Configuration for Orchestration Tool
 
 ```json
 {
-  "endpoint": "https://your-ngrok-url/mcp",
-  "protocol": "mcp",
+  "mcpServers": {
+    "hubspot": {
+      "command": "node",
+      "args": ["path/to/build/index.js"],
+      "env": {
+        "HUBSPOT_ACCESS_TOKEN": "your-hubspot-private-app-token",
+        "PORT": "3000",
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
+```
+
+### Example: n8n Integration
+
+To use the MCP server with **n8n**, create a workflow where a custom AI Agent interacts with HubSpot via your MCP server.
+
+#### Steps
+
+1. **Add an AI Agent node**  
+   This node handles natural language input and determines tool calls.
+
+2. **Add an MCP Agent node**  
+   - Type: `MCP Tool Runner`  
+   - Base URL: `https://your-server-url/mcp`  
+   - Server Transport: `httpStreamable` or `httpBatchable`
+
+3. **Connect AI Agent → MCP Agent**  
+   Pipe output from the AI Agent into the MCP Tool Runner node.
+
+4. **Optional: Add an Output node**  
+   Display responses from HubSpot (e.g., contact search, deal creation).
+
+#### Example Configuration (n8n)
+
+**AI Agent Node**
+
+```json
+{
+  "type": "agent",
+  "name": "HubSpot Assistant",
+  "model": "gpt-4",
   "toolChoice": "auto",
   "memory": {
     "type": "bufferWindowMemory",
@@ -147,38 +98,100 @@ Example agent configuration:
 }
 ```
 
-### Option 2: n8n Workflow
+**MCP Agent Node**
 
-1. Create a new workflow in n8n
-2. Add an **AI Agent** node
-3. Add an **AI Model** (Claude, GPT, etc.) and connect to the agent
-4. Add **MCP Client Tool** node:
+```json
+{
+  "type": "mcp",
+  "baseUrl": "https://your-server-url/mcp",
+  "transport": "httpStreamable"
+}
+```
 
-   * `Endpoint URL`: `https://your-ngrok-url/mcp`
-   * `Server Transport`: `httpStreamable`
-5. Connect all nodes
+> Replace `https://your-server-url` with your actual deployment or tunneling address (e.g., from ngrok).
 
-Your AI Agent in n8n can now auto-discover tools and query your HubSpot CRM via natural language.
+## API Methods
 
-## Example Use Cases
+### Contacts
 
-* **CRM Search**
-  "Find all contacts from Acme Corp."
+| Method             | Description                    |
+|--------------------|--------------------------------|
+| `search_contacts`  | Search contacts by filters     |
+| `create_contact`   | Create a new contact           |
+| `update_contact`   | Update an existing contact     |
 
-* **Deal Management**
-  "Create a \$50,000 deal with XYZ Ltd in the 'Proposal Sent' stage."
+### Companies
 
-* **Pipeline Analysis**
-  "List deals that haven’t had a follow-up in over 30 days."
+| Method               | Description                    |
+|----------------------|--------------------------------|
+| `search_companies`   | Search companies by filters    |
+| `create_company`     | Create a new company           |
+| `update_company`     | Update an existing company     |
 
-## Contributing
+### Deals
 
-1. Fork the repo
-2. Run `npm install`
-3. Add your feature or fix
-4. Run `npm run lint` and `npm test`
-5. Submit a pull request
+| Method           | Description                    |
+|------------------|--------------------------------|
+| `search_deals`   | Search deals by filters        |
+| `create_deal`    | Create a new deal              |
+| `update_deal`    | Update an existing deal        |
+
+## Example JSON-RPC Calls
+
+### Search Contacts
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "search_contacts",
+  "params": {
+    "limit": 10,
+    "properties": ["firstname", "lastname", "email"]
+  }
+}
+```
+
+### Create Company
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "create_company",
+  "params": {
+    "properties": {
+      "name": "TechStart Inc",
+      "industry": "Technology",
+      "city": "San Francisco"
+    }
+  }
+}
+```
+
+### Create Deal
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "create_deal",
+  "params": {
+    "properties": {
+      "amount": "50000",
+      "dealname": "ABC Corp Proposal",
+      "dealstage": "appointmentscheduled",
+      "pipeline": "default"
+    }
+  }
+}
+```
+
+## Requirements
+
+- Node.js 20.0.0 or higher  
+- HubSpot account with a private app that includes CRM access scopes  
 
 ## License
 
-This project is open-source under the [MIT License](LICENSE).
+MIT License
