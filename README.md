@@ -1,10 +1,15 @@
 # HubSpot MCP Server
 
-A Model Context Protocol (MCP) server for HubSpot CRM integration, compatible with Windows, macOS, and Linux.
+## Description
+
+A lightweight REST-based MCP server for integrating HubSpot CRM into automation platforms and AI agents.  
+Supports full access to contacts, companies, and deals via simple HTTP endpoints, ideal for use with n8n and other no-code tools.
 
 ## Overview
 
-This MCP server provides access to HubSpot CRM using a unified JSON-RPC 2.0 interface. It enables assistants, automation tools, or applications to search, create, and update contacts, companies, and deals—without directly interacting with individual HubSpot API endpoints. It is ideal for integration into both code-based and no-code environments.
+This MCP server provides access to HubSpot CRM through a RESTful HTTP interface. It enables assistants, automation tools, or applications to search, create, and update contacts, companies, and deals—without directly interacting with individual HubSpot API endpoints.
+
+The server is compatible with both code-based and no-code platforms that can make standard REST calls.
 
 ## Installation
 
@@ -29,7 +34,7 @@ This MCP server provides access to HubSpot CRM using a unified JSON-RPC 2.0 inte
 
 ## Configuration
 
-This MCP server can be used within orchestration environments or automation tools like **n8n**, **LangChain**, **Flowise**, or any JSON-RPC-compatible client.
+This MCP server can be used in orchestration environments and automation tools like n8n, Zapier, or any platform that supports making RESTful HTTP requests.
 
 ### Environment Variables
 
@@ -41,157 +46,102 @@ Set credentials via environment variables:
 | `PORT`                 | (Optional) Server port (default: 3000)               |
 | `NODE_ENV`             | (Optional) Environment mode: `development` or `production` |
 
-You may also provide the access token directly in the `params` of the JSON-RPC request if preferred.
+Create a `.env` file in your project root:
 
-### JSON Configuration for Orchestration Tool
-
-```json
-{
-  "mcpServers": {
-    "hubspot": {
-      "command": "node",
-      "args": ["path/to/build/index.js"],
-      "env": {
-        "HUBSPOT_ACCESS_TOKEN": "your-hubspot-private-app-token",
-        "PORT": "3000",
-        "NODE_ENV": "production"
-      }
-    }
-  }
-}
+```env
+HUBSPOT_ACCESS_TOKEN=pat-na1-your-token-here
+PORT=3000
+NODE_ENV=development
 ```
 
-### Example: n8n Integration
+## Starting the Server
 
-To use the MCP server with **n8n**, create a workflow where a custom AI Agent interacts with HubSpot via your MCP server.
+```bash
+# Development
+npm run dev
 
-#### Steps
-
-1. **Add an AI Agent node**  
-   This node handles natural language input and determines tool calls.
-
-2. **Add an MCP Agent node**  
-   - Type: `MCP Tool Runner`  
-   - Base URL: `https://your-server-url/mcp`  
-   - Server Transport: `httpStreamable` or `httpBatchable`
-
-3. **Connect AI Agent → MCP Agent**  
-   Pipe output from the AI Agent into the MCP Tool Runner node.
-
-4. **Optional: Add an Output node**  
-   Display responses from HubSpot (e.g., contact search, deal creation).
-
-#### Example Configuration (n8n)
-
-**AI Agent Node**
-
-```json
-{
-  "type": "agent",
-  "name": "HubSpot Assistant",
-  "model": "gpt-4",
-  "toolChoice": "auto",
-  "memory": {
-    "type": "bufferWindowMemory",
-    "windowSize": 12
-  }
-}
+# Production
+npm start
 ```
 
-**MCP Agent Node**
+The server will run on `http://localhost:3000` or the port you configure.
 
-```json
-{
-  "type": "mcp",
-  "baseUrl": "https://your-server-url/mcp",
-  "transport": "httpStreamable"
-}
+## Available REST API Endpoints
+
+### Tools
+
+| Method | Endpoint                         | Description                      |
+|--------|----------------------------------|----------------------------------|
+| GET    | `/health`                        | Health check                     |
+| GET    | `/tools`                         | List all available tools         |
+| POST   | `/tools/:toolName/call`          | Call a specific tool             |
+
+## Example API Calls
+
+### Health Check
+
+```bash
+curl http://localhost:3000/health
 ```
 
-> Replace `https://your-server-url` with your actual deployment or tunneling address (e.g., from ngrok).
+### List Available Tools
 
-## API Methods
-
-### Contacts
-
-| Method             | Description                    |
-|--------------------|--------------------------------|
-| `search_contacts`  | Search contacts by filters     |
-| `create_contact`   | Create a new contact           |
-| `update_contact`   | Update an existing contact     |
-
-### Companies
-
-| Method               | Description                    |
-|----------------------|--------------------------------|
-| `search_companies`   | Search companies by filters    |
-| `create_company`     | Create a new company           |
-| `update_company`     | Update an existing company     |
-
-### Deals
-
-| Method           | Description                    |
-|------------------|--------------------------------|
-| `search_deals`   | Search deals by filters        |
-| `create_deal`    | Create a new deal              |
-| `update_deal`    | Update an existing deal        |
-
-## Example JSON-RPC Calls
+```bash
+curl http://localhost:3000/tools
+```
 
 ### Search Contacts
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "search_contacts",
-  "params": {
+```bash
+curl -X POST http://localhost:3000/tools/hubspot-search-objects/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "object_type": "contacts",
     "limit": 10,
     "properties": ["firstname", "lastname", "email"]
-  }
-}
+  }'
 ```
 
 ### Create Company
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "create_company",
-  "params": {
-    "properties": {
-      "name": "TechStart Inc",
-      "industry": "Technology",
-      "city": "San Francisco"
-    }
-  }
-}
+```bash
+curl -X POST http://localhost:3000/tools/hubspot-batch-create-objects/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "object_type": "companies",
+    "inputs": [
+      {
+        "properties": {
+          "name": "Example Corp",
+          "industry": "Technology",
+          "city": "San Francisco"
+        }
+      }
+    ]
+  }'
 ```
 
-### Create Deal
+### Update Deal
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "create_deal",
-  "params": {
+```bash
+curl -X POST http://localhost:3000/tools/hubspot-update-object/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "object_type": "deals",
+    "object_id": "123456789",
     "properties": {
-      "amount": "50000",
-      "dealname": "ABC Corp Proposal",
-      "dealstage": "appointmentscheduled",
-      "pipeline": "default"
+      "amount": "75000",
+      "dealstage": "contractsent"
     }
-  }
-}
+  }'
 ```
 
 ## Requirements
 
 - Node.js 20.0.0 or higher  
 - HubSpot account with a private app that includes CRM access scopes  
+- Internet connection to reach HubSpot API
 
 ## License
 
-MIT License
+MIT License – See `LICENSE` file for details.
