@@ -58,10 +58,10 @@ NODE_ENV=development
 
 ```bash
 # Development
-npm run dev
+npm run start:dev
 
 # Production
-npm start
+npm run start:prod
 ```
 
 The server will run on `http://localhost:3000` or the port you configure.
