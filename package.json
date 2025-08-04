@@ -12,12 +12,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
-    "clean": "rmdir /s /q dist 2>nul || echo dist folder cleaned",
-    "clean:unix": "rm -rf dist",
-    "prepare": "npm run build",
+    "build": "tsc",
     "start:dev": "nodemon src/index.js",
-    "start:prod": "node src/index.js",
+    "start:prod": "node dist/index.js",
     "lint": "eslint . --ext .js,.ts",
     "lint:fix": "eslint . --ext .js,.ts --fix",
     "format": "prettier --write \"src/**/*.{js,ts}\"",
