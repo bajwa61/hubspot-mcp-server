@@ -23,7 +23,7 @@ RUN npm prune --omit=dev
 ENV NODE_ENV=production
 
 # Expose the port your app runs on
-EXPOSE 3000
+EXPOSE 4000
 
 # Start the compiled app (adjust if your entry point is different)
 CMD ["node", "dist/index.js"]
